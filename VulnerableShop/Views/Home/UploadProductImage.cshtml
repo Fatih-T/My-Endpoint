@@ -1,0 +1,26 @@
+@{
+    ViewData["Title"] = "Ürün Resmi Yükle";
+}
+
+<h2>Ürün Resmi Yükleme Paneli</h2>
+
+<form method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="file">Dosya Seç:</label>
+        <input type="file" class="form-control" name="file" id="file" />
+    </div>
+    <button type="submit" class="btn btn-success mt-2">Yükle</button>
+</form>
+
+<hr />
+
+@if (ViewBag.Message != null)
+{
+    <div class="alert alert-info">
+        @ViewBag.Message
+    </div>
+}
+
+<div class="alert alert-danger mt-4">
+    <strong>Not:</strong> Bu modül üzerinde dosya uzantısı kontrolü yapılmamıştır. .aspx veya .exe gibi zararlı dosyalar yükleyerek w3wp.exe üzerinden Carbon Black tarafından nasıl algılanacağını test edebilirsiniz.
+</div>
