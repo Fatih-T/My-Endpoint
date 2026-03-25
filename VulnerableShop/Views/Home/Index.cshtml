@@ -1,48 +1,51 @@
 @model List<VulnerableShop.Models.Product>
-
-<h2>E-Ticaret Paneli</h2>
-
-<form method="get">
-    <input type="text" name="query" placeholder="Ürün ara..." />
-    <button type="submit">Ara</button>
-</form>
-
-@if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
-{
-    @* ZAFİYET: Reflected XSS (Html.Raw kullanılarak encode edilmeden basılıyor) *@
-    <p>Arama sonucu: @Html.Raw(ViewBag.SearchQuery)</p>
+@{
+    ViewData["Title"] = "Ürün Kataloğu";
 }
 
-<div class="row">
-    @foreach (var product in Model)
+<div class="main-card">
+    <h2 class="section-title">E-Ticaret Ürün Kataloğu</h2>
+    <p class="text-muted mb-4">Aramak istediğiniz ürünü aşağıdaki kutucuğa yazabilirsiniz. (SQL Injection & XSS Testi İçin Uygundur)</p>
+
+    <form method="get" class="row g-3">
+        <div class="col-md-9">
+            <input type="text" name="query" class="form-control" placeholder="Örn: Laptop, Phone..." />
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-soft w-100">Ara</button>
+        </div>
+    </form>
+
+    @if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
     {
-        <div class="col-md-4">
-            <h4>@product.ProductName</h4>
-            <p>Fiyat: @product.Price TL</p>
+        <div class="alert alert-info mt-4" style="background-color: rgba(162, 155, 254, 0.1); border: 1px solid #a29bfe; color: #6c5ce7;">
+            <strong>Arama Sonucu:</strong> @Html.Raw(ViewBag.SearchQuery)
         </div>
     }
 </div>
 
-<hr />
-<h3>Sistem Teşhis (Ping)</h3>
-<form asp-action="Ping">
-    <input type="text" name="ip" placeholder="IP Adresi" />
-    <button type="submit">Ping At</button>
-</form>
-
-@if (ViewBag.PingResult != null)
-{
-    <pre>@ViewBag.PingResult</pre>
-}
-
-<hr />
-<h3>Dosya Yükle</h3>
-<form asp-action="UploadProductImage" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" />
-    <button type="submit">Yükle</button>
-</form>
-
-@if (ViewBag.Message != null)
-{
-    <p>@ViewBag.Message</p>
-}
+<div class="row">
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var product in Model)
+        {
+            <div class="col-md-4">
+                <div class="product-card">
+                    <div style="background: #f1f2f6; height: 150px; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 3rem;">📦</span>
+                    </div>
+                    <h4 class="mb-2">@product.ProductName</h4>
+                    <p class="text-muted">@product.Description</p>
+                    <h5 class="text-primary mt-2">@product.Price.ToString("C2")</h5>
+                    <button class="btn btn-outline-primary btn-sm mt-3 w-100" style="border-radius: 6px;">Sepete Ekle</button>
+                </div>
+            </div>
+        }
+    }
+    else if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
+    {
+        <div class="col-12 text-center py-5">
+            <p class="text-muted">Aradığınız kriterlere uygun ürün bulunamadı.</p>
+        </div>
+    }
+</div>
