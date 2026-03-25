@@ -1,0 +1,14 @@
+# .NET Core
+**/bin/
+**/obj/
+**/publish/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Project specific
+VulnerableShop/wwwroot/uploads/*
+!VulnerableShop/wwwroot/uploads/.gitkeep

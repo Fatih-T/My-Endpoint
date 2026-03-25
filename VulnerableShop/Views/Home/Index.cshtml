@@ -1,0 +1,48 @@
+@model List<VulnerableShop.Models.Product>
+
+<h2>E-Ticaret Paneli</h2>
+
+<form method="get">
+    <input type="text" name="query" placeholder="Ürün ara..." />
+    <button type="submit">Ara</button>
+</form>
+
+@if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
+{
+    @* ZAFİYET: Reflected XSS (Html.Raw kullanılarak encode edilmeden basılıyor) *@
+    <p>Arama sonucu: @Html.Raw(ViewBag.SearchQuery)</p>
+}
+
+<div class="row">
+    @foreach (var product in Model)
+    {
+        <div class="col-md-4">
+            <h4>@product.ProductName</h4>
+            <p>Fiyat: @product.Price TL</p>
+        </div>
+    }
+</div>
+
+<hr />
+<h3>Sistem Teşhis (Ping)</h3>
+<form asp-action="Ping">
+    <input type="text" name="ip" placeholder="IP Adresi" />
+    <button type="submit">Ping At</button>
+</form>
+
+@if (ViewBag.PingResult != null)
+{
+    <pre>@ViewBag.PingResult</pre>
+}
+
+<hr />
+<h3>Dosya Yükle</h3>
+<form asp-action="UploadProductImage" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" />
+    <button type="submit">Yükle</button>
+</form>
+
+@if (ViewBag.Message != null)
+{
+    <p>@ViewBag.Message</p>
+}

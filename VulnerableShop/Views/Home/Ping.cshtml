@@ -1,0 +1,25 @@
+@{
+    ViewData["Title"] = "Sistem Teşhis";
+}
+
+<h2>Sistem Teşhis (Ping)</h2>
+
+<form method="get">
+    <div class="form-group">
+        <label for="ip">IP veya Host Adresi:</label>
+        <input type="text" class="form-control" name="ip" id="ip" placeholder="Örn: 8.8.8.8" />
+    </div>
+    <button type="submit" class="btn btn-primary mt-2">Ping Gönder</button>
+</form>
+
+<hr />
+
+@if (ViewBag.PingResult != null)
+{
+    <h4>Sonuç:</h4>
+    <pre style="background-color: #f8f9fa; padding: 15px; border: 1px solid #ddd;">@ViewBag.PingResult</pre>
+}
+
+<div class="alert alert-warning mt-4">
+    <strong>Not:</strong> Bu modül w3wp.exe üzerinden bir child process tetikleyerek Carbon Black agent'ının cmd.exe oluşumunu nasıl yakaladığını test etmek için tasarlanmıştır.
+</div>
