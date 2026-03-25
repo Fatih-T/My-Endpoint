@@ -18,63 +18,112 @@ namespace VulnerableShop.Controllers
             _env = env;
         }
 
-        // 1. Gelişmiş SQL Injection (Stacked Queries Desteği ile)
-        // Hedef: '; EXEC xp_cmdshell 'whoami'-- gibi komutların çalışabilmesi
         public IActionResult Index(string query)
         {
             var products = new List<Product>();
-            if (!string.IsNullOrEmpty(query))
+            using (var conn = new SqlConnection(_connectionString))
             {
-                using (var conn = new SqlConnection(_connectionString))
+                // ZAFİYET: SQL Injection (Ham string birleştirme)
+                string sql = "SELECT * FROM Products";
+                if (!string.IsNullOrEmpty(query))
                 {
-                    // ZAFİYET: SQL Injection (Ham string birleştirme ve çoklu komut desteği)
-                    // NOT: MSSQL'de stacked query için CommandType.Text yeterlidir.
-                    string sql = "SELECT * FROM Products WHERE ProductName LIKE '%" + query + "%'";
-                    var cmd = new SqlCommand(sql, conn);
-
-                    try {
-                        conn.Open();
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                products.Add(new Product
-                                {
-                                    ProductId = (int)reader["ProductId"],
-                                    ProductName = reader["ProductName"].ToString(),
-                                    Price = (decimal)reader["Price"],
-                                    Description = reader["Description"].ToString()
-                                });
-                            }
-                        }
-                    } catch (Exception ex) {
-                        ViewBag.Error = "SQL Hatası: " + ex.Message;
-                    }
+                    sql += " WHERE ProductName LIKE '%" + query + "%'";
+                    ViewBag.SearchQuery = query;
                 }
-                ViewBag.SearchQuery = query;
+
+                var cmd = new SqlCommand(sql, conn);
+                try {
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            products.Add(new Product
+                            {
+                                ProductId = (int)reader["ProductId"],
+                                ProductName = reader["ProductName"].ToString(),
+                                Price = (decimal)reader["Price"],
+                                Description = reader["Description"].ToString()
+                            });
+                        }
+                    }
+                } catch (Exception ex) {
+                    ViewBag.Error = "SQL Hatası: " + ex.Message;
+                }
             }
             return View(products);
         }
 
-        // 2. Command Injection (RCE - w3wp.exe Child Process Test)
+        // Stored XSS İçin Ürün Detay & Yorum Sayfası
+        public IActionResult Details(int id)
+        {
+            var product = new Product();
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                string sql = "SELECT * FROM Products WHERE ProductId = " + id;
+                var cmd = new SqlCommand(sql, conn);
+                conn.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        product.ProductId = (int)reader["ProductId"];
+                        product.ProductName = reader["ProductName"].ToString();
+                        product.Description = reader["Description"].ToString();
+                        product.Price = (decimal)reader["Price"];
+                    }
+                }
+
+                // Yorumları Listele (Stored XSS Tetikleme)
+                string commentSql = "SELECT * FROM Comments WHERE ProductId = " + id;
+                var commentCmd = new SqlCommand(commentSql, conn);
+                using (var reader = commentCmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        product.Comments.Add(new Comment
+                        {
+                            UserNickname = reader["UserNickname"].ToString(),
+                            CommentText = reader["CommentText"].ToString(),
+                            CreatedAt = (DateTime)reader["CreatedAt"]
+                        });
+                    }
+                }
+            }
+            return View(product);
+        }
+
+        [HttpPost]
+        public IActionResult AddComment(int productId, string userNickname, string commentText)
+        {
+            // ZAFİYET: Stored XSS (Girdi sanitize edilmeden kaydediliyor)
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                string sql = "INSERT INTO Comments (ProductId, UserNickname, CommentText) VALUES (@pId, @nick, @text)";
+                var cmd = new SqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@pId", productId);
+                cmd.Parameters.AddWithValue("@nick", userNickname);
+                cmd.Parameters.AddWithValue("@text", commentText);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            return RedirectToAction("Details", new { id = productId });
+        }
+
         public IActionResult Ping(string ip)
         {
             if (string.IsNullOrEmpty(ip)) return View();
-
             ProcessStartInfo psi = new ProcessStartInfo();
             psi.FileName = "cmd.exe";
             psi.Arguments = "/c ping " + ip;
             psi.RedirectStandardOutput = true;
             psi.UseShellExecute = false;
-
             var process = Process.Start(psi);
             string result = process.StandardOutput.ReadToEnd();
             ViewBag.PingResult = result;
-
             return View();
         }
 
-        // 3. Insecure File Upload & Trigger (Web Shell / RCE Test)
         public IActionResult UploadProductImage()
         {
             var uploads = Path.Combine(_env.WebRootPath, "uploads");
@@ -93,32 +142,25 @@ namespace VulnerableShop.Controllers
             {
                 var uploads = Path.Combine(_env.WebRootPath, "uploads");
                 if (!Directory.Exists(uploads)) Directory.CreateDirectory(uploads);
-
                 var filePath = Path.Combine(uploads, file.FileName);
                 using (var fileStream = new FileStream(filePath, FileMode.Create))
                 {
                     await file.CopyToAsync(fileStream);
                 }
-                ViewBag.Message = "Dosya başarıyla yüklendi: " + file.FileName;
             }
             return RedirectToAction("UploadProductImage");
         }
 
-        // Zararlı dosyayı tetikleme simülasyonu (IIS üzerinde .aspx vb. dosyaları çalıştırmak için)
         public IActionResult TriggerFile(string fileName)
         {
-            // ZAFİYET: Path Traversal ve Dosya Çalıştırma (RCE)
-            // NOT: IIS üzerinde .aspx veya .exe'nin w3wp.exe altında tetiklenmesi için direkt URL erişimi de kullanılabilir.
-            // Bu metod sunucu tarafında bu dosyanın Process.Start ile başlatılmasını sağlar.
             var filePath = Path.Combine(_env.WebRootPath, "uploads", fileName);
-
             if (System.IO.File.Exists(filePath))
             {
                 try {
                     Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
-                    ViewBag.Message = fileName + " dosyası sunucu tarafında tetiklendi (RCE).";
+                    ViewBag.Message = fileName + " tetiklendi.";
                 } catch (Exception ex) {
-                    ViewBag.Error = "Dosya tetikleme hatası: " + ex.Message;
+                    ViewBag.Error = "Hata: " + ex.Message;
                 }
             }
             return View("UploadProductImage");

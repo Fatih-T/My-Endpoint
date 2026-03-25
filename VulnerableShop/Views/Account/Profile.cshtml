@@ -1,0 +1,20 @@
+@{
+    ViewData["Title"] = "Profilim";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="main-card text-center">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">👤</div>
+            <h2 class="section-title">Hoş Geldiniz, @User.Identity.Name!</h2>
+            <p class="text-muted">Bu sayfa Broken Access Control ve Broken Authentication testleri için tasarlanmıştır.</p>
+
+            <div class="mt-4 py-3 border-top">
+                <p><strong>Yetki Rolü:</strong> <span class="badge bg-soft-primary" style="background-color: #a29bfe; color: white;">@User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value</span></p>
+                <p><strong>Oturum Durumu:</strong> Aktif</p>
+            </div>
+
+            <a asp-action="Logout" class="btn btn-outline-danger mt-3">Güvenli Çıkış Yap</a>
+        </div>
+    </div>
+</div>
