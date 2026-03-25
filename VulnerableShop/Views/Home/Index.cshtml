@@ -42,18 +42,11 @@
                     <h4>@product.ProductName</h4>
                     <p class="text-muted" style="font-size: 0.9rem;">@product.Description</p>
                     <h5 class="text-primary mt-2">@product.Price.ToString("C2")</h5>
-                    <button class="btn btn-outline-primary btn-sm mt-3 w-100">Sepete Ekle</button>
+                    <div class="d-flex gap-2">
+                         <a asp-action="Details" asp-route-id="@product.ProductId" class="btn btn-soft btn-sm flex-grow-1 mt-3">İncele & Yorumlar</a>
+                    </div>
                 </div>
             </div>
         }
     }
-</div>
-
-<div class="alert alert-warning mt-5">
-    <div class="d-flex align-items-center">
-        <div style="font-size: 1.5rem; margin-right: 1rem;">🛡️</div>
-        <div>
-            <strong>Carbon Black Test Notu:</strong> SQL Injection üzerinden <code>xp_cmdshell</code> tetiklendiğinde, <code>sqlservr.exe</code> (MSSQL süreci) altında bir <code>cmd.exe</code> oluşacaktır. Bu davranış "Database RCE" olarak Carbon Black tarafından yüksek kritiklikte raporlanacaktır.
-        </div>
-    </div>
 </div>

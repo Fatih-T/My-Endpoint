@@ -1,0 +1,43 @@
+@model VulnerableShop.Models.Product
+@{
+    ViewData["Title"] = Model.ProductName + " Detayları";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="main-card">
+            <h2 class="section-title">@Model.ProductName</h2>
+            <p class="lead">@Model.Description</p>
+            <h3 class="text-primary">@Model.Price.ToString("C2")</h3>
+            <hr />
+
+            <h4>Yorumlar (Stored XSS Testi)</h4>
+            <div class="mt-4">
+                @foreach (var comment in Model.Comments)
+                {
+                    <div class="p-3 mb-3 border-start border-4 border-primary bg-light" style="border-radius: 4px;">
+                        <strong>@comment.UserNickname</strong> <small class="text-muted">(@comment.CreatedAt)</small>
+                        <p class="mt-2">
+                            @* ZAFİYET: Stored XSS (Html.Raw kullanılarak encode edilmeden basılıyor) *@
+                            @Html.Raw(comment.CommentText)
+                        </p>
+                    </div>
+                }
+            </div>
+
+            <hr class="my-5" />
+
+            <h5>Yorum Yap</h5>
+            <form asp-action="AddComment" method="post">
+                <input type="hidden" name="productId" value="@Model.ProductId" />
+                <div class="mb-3">
+                    <input type="text" name="userNickname" class="form-control" placeholder="Rumuzunuz" required />
+                </div>
+                <div class="mb-3">
+                    <textarea name="commentText" class="form-control" rows="3" placeholder="Yorumunuz (XSS payload deneyin...)" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-soft">Gönder</button>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,26 +1,28 @@
-# .NET Siber Güvenlik Laboratuvarı - Gelişmiş RCE & EDR Analiz Rehberi
+# .NET Siber Güvenlik Laboratuvarı - Gelişmiş EDR Analiz Rehberi
 
-Bu proje, SQL Injection ve Dosya Yükleme üzerinden Remote Code Execution (RCE) senaryolarını test etmek için geliştirilmiştir.
+Bu proje, OWASP Top 10 zafiyetlerini ve gelişmiş Remote Code Execution (RCE) senaryolarını IIS/MSSQL ortamında test etmek için geliştirilmiştir.
 
-## 1. SQL Injection Üzerinden Komut Çalıştırma (xp_cmdshell)
-MSSQL üzerinden komut çalıştırmak için şu adımları izleyin:
-1. **Hazırlık:** `init_db.sql` scriptini çalıştırarak `xp_cmdshell` özelliğini aktif edin.
-2. **Saldırı:** Arama kutusuna şu komutu girin:
-   `'; EXEC xp_cmdshell 'whoami'--`
-3. **Analiz:** Carbon Black üzerinde `sqlservr.exe` (MSSQL) süreci altından bir `cmd.exe` oluştuğunu görmelisiniz.
+## 1. Yeni Test Senaryoları
 
-## 2. Insecure File Upload & Trigger (Web Shell / RCE)
-Dosya yükleyip sunucu tarafında tetiklemek için:
-1. **Yükleme:** Bir `.aspx` web shell veya bir `.exe` dosyası yükleyin.
-2. **Tetikleme:**
-   - **Tetikle (Process.Start):** Sunucu tarafında `Process.Start()` metoduyla dosyayı çalıştırır. (w3wp.exe -> child process)
-   - **Web Erişimi:** Dosyaya tarayıcı üzerinden direkt erişir. (`.aspx` web shell'ler için idealdir)
-3. **IIS İzni:** IIS Manager üzerinden `uploads` klasörüne sağ tıklayıp "Handler Mappings" kısmından `Execute` izni vermeniz gerekebilir.
+### Senaryo A: Broken Authentication & SQLi Login Bypass
+- **URL:** `/Account/Login`
+- **Saldırı:** Kullanıcı adı kısmına `admin' --` yazın, şifreyi boş bırakın.
+- **Analiz:** SQL Injection ile kimlik doğrulamanın nasıl bypass edildiğini ve Carbon Black'in veritabanı sorgularındaki anormallikleri nasıl raporladığını izleyin.
 
-## 3. IIS & Yazma Yetkileri
-- **Handler Mappings:** Yüklediğiniz `.aspx` dosyalarının çalışması için IIS üzerinde "ASP.NET" modülünün kurulu ve aktif olduğundan emin olun.
-- **Dizin İzinleri:** `wwwroot/uploads` dizinine `IIS AppPool\<SiteAdi>` kullanıcısı için "Full Control" veya en azından "Write/Execute" yetkisi verin.
+### Senaryo B: Stored XSS (Kalıcı XSS)
+- **URL:** Herhangi bir ürünün "İncele" sayfasına gidin.
+- **Saldırı:** Yorum kısmına `<script>alert(document.cookie);</script>` yazın.
+- **Analiz:** Bu yorum veritabanına kaydedilir ve sayfayı her ziyaret eden kullanıcıda çalışır. Uygulamanın `HttpOnly=false` ayarı sayesinde cookie'lerin nasıl çalınabileceğini test edin.
 
-## 4. Carbon Black Önemli Takip Noktaları
-- **Process Lineage:** `w3wp.exe` -> `cmd.exe` veya `sqlservr.exe` -> `cmd.exe` ağaçlarını takip edin.
-- **File Mod Events:** `w3wp.exe` tarafından `uploads` klasörüne yazılan dosyaları ve bu dosyaların sonraki süreçte çalıştırılma girişimlerini analiz edin.
+### Senaryo C: xp_cmdshell (Database RCE)
+- **Saldırı:** Arama kutusuna `'; EXEC xp_cmdshell 'whoami'--` yazın.
+- **Analiz:** `sqlservr.exe` altından başlatılan `cmd.exe` süreçlerini takip edin.
+
+### Senaryo D: Web Shell & File Execution
+- **Saldırı:** `uploads` modülü üzerinden bir `.aspx` web shell yükleyin ve "Web Erişimi" butonuna basın.
+- **Analiz:** `w3wp.exe`'nin (IIS Worker Process) doğrudan zararlı kod çalıştırma davranışını izleyin.
+
+## 2. Kurulum İpucu
+- Projeyi IIS'e atmadan önce `dotnet publish` aldığınızdan emin olun.
+- `wwwroot/uploads` dizinine **Write** yetkisi vermeyi unutmayın.
+- MSSQL üzerinde `init_db.sql` scriptini çalıştırarak `xp_cmdshell`'i aktif edin.
